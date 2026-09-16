@@ -1,0 +1,7 @@
+# fastlane match stores signing certs/profiles in a private git repo you control.
+# See docs/APP_STORE_SUBMISSION.md for one-time setup instructions.
+git_url(ENV["MATCH_GIT_URL"])
+storage_mode("git")
+type("appstore")
+app_identifier(["com.sunilgentyala.tidytrail"])
+username(ENV["FASTLANE_APPLE_ID"])

@@ -1,0 +1,6 @@
+app_identifier("com.sunilgentyala.tidytrail")
+
+# Set these as GitHub Actions secrets (FASTLANE_APPLE_ID, APPLE_TEAM_ID) -
+# never hardcode an Apple ID or team ID in this file, since it is public.
+apple_id(ENV["FASTLANE_APPLE_ID"])
+team_id(ENV["APPLE_TEAM_ID"])

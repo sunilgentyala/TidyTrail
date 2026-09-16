@@ -1,0 +1,22 @@
+.DS_Store
+
+# The Xcode project is generated from project.yml by XcodeGen - it is not
+# committed, project.yml is the source of truth.
+*.xcodeproj/
+Generated/
+
+xcuserdata/
+DerivedData/
+.build/
+.swiftpm/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+.env

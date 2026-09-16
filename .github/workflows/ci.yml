@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  core-tests:
+    name: Core logic tests (swift test)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: swift test
+        run: swift test --package-path .
+
+  app-build:
+    name: iOS app build (XcodeGen + xcodebuild)
+    runs-on: macos-14
+    needs: core-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build for iOS Simulator (no code signing)
+        run: |
+          xcodebuild build \
+            -project TidyTrail.xcodeproj \
+            -scheme TidyTrail \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO
