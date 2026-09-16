@@ -5,6 +5,10 @@ your own Apple Developer account and can't be done by CI or by me on your
 behalf - Apple requires the account owner to do these (several involve 2FA
 or accepting legal agreements).
 
+The repo itself, the app icon, the landing page, and the privacy policy page
+are already done - see "Things already done for you" below. What's left is
+entirely Apple-account-side steps 1-6.
+
 ## 1. One-time Apple Developer Portal setup
 
 1. Sign in at https://developer.apple.com/account.
@@ -78,20 +82,29 @@ and uploads a build to TestFlight. From there:
 1. App Store Connect > TestFlight - add yourself as an internal tester,
    confirm the build installs and works on a real device.
 2. Fill in the App Store listing: screenshots (required sizes per device
-   class), description, keywords, support URL, **privacy policy URL**
-   (required - even a simple static page saying TidyTrail only touches
-   folders you pick and never sends data anywhere works), and the privacy
-   "nutrition label" (App Store Connect > App Privacy) - TidyTrail collects
-   no data, so this should be a straightforward "Data Not Collected"
-   declaration, but confirm that's still accurate before submitting.
+   class), description, keywords, support URL, and **privacy policy URL** -
+   use `https://sunilgentyala.github.io/TidyTrail/privacy.html` (already
+   written and live once GitHub Pages is enabled - see below). For the
+   privacy "nutrition label" (App Store Connect > App Privacy): TidyTrail
+   makes no network requests and collects nothing, so this should be a
+   straightforward "Data Not Collected" declaration - confirm that's still
+   accurate before submitting if you've changed the code since.
 3. Submit for review from App Store Connect.
+
+## Things already done for you
+
+- App icon: a real 1024x1024 icon is in place at
+  `Sources/TidyTrail/Assets.xcassets/AppIcon.appiconset/AppIcon.png`
+  (generated, not a placeholder). Replace it if you want different branding.
+- Privacy policy: written and published at
+  `docs/privacy.html` → `https://sunilgentyala.github.io/TidyTrail/privacy.html`.
+- Landing page: `https://sunilgentyala.github.io/TidyTrail/` - useful for the
+  App Store listing's "marketing URL" field.
 
 ## Things only you can decide/provide
 
-- A real 1024x1024 app icon (currently an empty placeholder slot in
-  `Sources/TidyTrail/Assets.xcassets/AppIcon.appiconset`) - I can generate a
-  simple placeholder graphic if you want one, but the actual branding is
-  your call.
-- App Store screenshots (need a real device or simulator with the built app).
-- The privacy policy page URL.
-- Final review of the App Store description/marketing copy.
+- App Store screenshots (need a real device or simulator with the built app
+  running - can't be produced without a Mac).
+- Final review of the App Store description/marketing copy and keywords.
+- Whether the free-tier "Data Not Collected" privacy label still matches the
+  code if you add any feature later (e.g. crash reporting, analytics).

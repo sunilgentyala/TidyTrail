@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TidyTrail — iOS storage organizer with a deletion log</title>
+<meta name="description" content="TidyTrail finds duplicate and large files in iOS folders you pick, and logs every deletion to a text file before it happens.">
+<link rel="icon" type="image/png" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<style>
+  :root {
+    --teal: #0ea8a3;
+    --indigo: #4c3ddb;
+    --ink: #0f172a;
+    --muted: #5b6472;
+    --bg: #ffffff;
+    --panel: #f6f7fb;
+    --border: #e6e8ef;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+  header.hero {
+    background: linear-gradient(120deg, var(--teal), var(--indigo));
+    color: #fff;
+    padding: 64px 0 56px;
+  }
+  header.hero .badge {
+    display: inline-block;
+    font-size: 13px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.35);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+  }
+  header.hero h1 {
+    font-size: clamp(34px, 6vw, 56px);
+    margin: 0 0 12px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  header.hero p.tagline {
+    font-size: clamp(16px, 2.4vw, 20px);
+    max-width: 640px;
+    margin: 0 0 28px;
+    color: rgba(255,255,255,.92);
+  }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+    border: 1px solid transparent;
+  }
+  .btn-primary { background: #fff; color: var(--indigo); }
+  .btn-ghost { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.5); }
+
+  section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  h2 {
+    font-size: 28px;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  p.lede { color: var(--muted); max-width: 680px; margin: 0 0 32px; }
+
+  .grid3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 760px) { .grid3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 17px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  .scope-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 760px) { .scope-box { grid-template-columns: 1fr; } }
+  .scope-box .col {
+    border-radius: 14px;
+    padding: 22px;
+    border: 1px solid var(--border);
+  }
+  .scope-box .yes { border-color: #bfe7c9; background: #f2fbf4; }
+  .scope-box .no { border-color: #f0c9c9; background: #fdf4f4; }
+  .scope-box h3 { margin-top: 0; font-size: 15px; text-transform: uppercase; letter-spacing: .03em; }
+  .scope-box ul { margin: 0; padding-left: 20px; color: var(--ink); font-size: 14.5px; }
+  .scope-box li { margin-bottom: 6px; }
+
+  /* App mockup - illustrative UI, not real screenshots */
+  .mockups {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 760px) { .mockups { grid-template-columns: 1fr; } }
+  .phone {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(15,23,42,.06);
+  }
+  .phone .titlebar {
+    padding: 14px 16px 10px;
+    font-weight: 700;
+    font-size: 15px;
+    border-bottom: 1px solid var(--border);
+  }
+  .phone .row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f0f1f5;
+    font-size: 13px;
+  }
+  .phone .row:last-child { border-bottom: none; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #cfd3dc; flex-shrink: 0; }
+  .dot.on { background: var(--indigo); border-color: var(--indigo); }
+  .swatch { width: 22px; height: 22px; border-radius: 5px; background: linear-gradient(120deg, var(--teal), var(--indigo)); flex-shrink: 0; }
+  .fname { flex: 1; color: var(--ink); }
+  .fsize { color: var(--muted); font-size: 12px; }
+  .log-line { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--muted); padding: 3px 16px; }
+  .log-line.deleted { color: #147a3d; }
+  .caption { text-align: center; font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+  footer {
+    padding: 40px 0 60px;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  footer a { color: var(--indigo); }
+  code { background: var(--panel); padding: 2px 6px; border-radius: 5px; font-size: 90%; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="badge">In development · not yet on the App Store</span>
+    <h1>TidyTrail</h1>
+    <p class="tagline">Finds duplicate and large files in an iOS folder you pick — and writes a text log of exactly what it deleted, before it deletes anything.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/sunilgentyala/TidyTrail">View source on GitHub</a>
+      <a class="btn btn-ghost" href="#scope">How it works on iOS</a>
+    </div>
+  </div>
+</header>
+
+<section id="what">
+  <div class="wrap">
+    <h2>What it does</h2>
+    <p class="lede">A focused storage-cleanup tool built around one idea: never delete silently. Every run leaves a paper trail.</p>
+    <div class="grid3">
+      <div class="card">
+        <h3>Pick a folder</h3>
+        <p>Grant access to one folder at a time through the standard iOS Files picker — an "On My iPhone" folder, or an iCloud Drive folder.</p>
+      </div>
+      <div class="card">
+        <h3>Find what's worth clearing</h3>
+        <p>Exact duplicates are found by content hash, not just name or size. The largest files in the folder are surfaced too.</p>
+      </div>
+      <div class="card">
+        <h3>Delete with a log</h3>
+        <p>Before anything is removed, TidyTrail writes a manifest to <code>Files &gt; TidyTrail Logs</code>, then updates it with the real outcome — deleted, or failed and why.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="scope">
+  <div class="wrap">
+    <h2>Honest about iOS sandboxing</h2>
+    <p class="lede">iOS does not let third-party apps scan "the whole phone" or clear another app's cache — there's no such API, and Apple rejects apps that claim otherwise. TidyTrail is scoped to what's actually possible.</p>
+    <div class="scope-box">
+      <div class="col yes">
+        <h3>What TidyTrail can do</h3>
+        <ul>
+          <li>Scan a folder you explicitly grant access to via the Files picker</li>
+          <li>Find exact duplicate files by content, and the largest files</li>
+          <li>Delete files you select, with a before-and-after text log</li>
+          <li>Show device-wide total/available storage (public API)</li>
+        </ul>
+      </div>
+      <div class="col no">
+        <h3>What no iOS app can do</h3>
+        <ul>
+          <li>Scan or delete other apps' caches or documents</li>
+          <li>Clear OS-level temp files</li>
+          <li>See a device-wide breakdown of storage by app</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="preview">
+  <div class="wrap">
+    <h2>Preview</h2>
+    <p class="lede">Illustrative mockups of the three tabs — not screenshots of a shipped build, since the app hasn't been submitted yet.</p>
+    <div class="mockups">
+      <div class="phone">
+        <div class="titlebar">Scan</div>
+        <div class="row"><span class="dot on"></span><span class="fname">IMG_0231-copy.mov</span><span class="fsize">184 MB</span></div>
+        <div class="row"><span class="dot"></span><span class="fname">export_final.mp4</span><span class="fsize">96 MB</span></div>
+        <div class="row"><span class="dot"></span><span class="fname">backup-2026.zip</span><span class="fsize">61 MB</span></div>
+        <div class="row"><span class="dot"></span><span class="fname">notes-draft.pdf</span><span class="fsize">4 MB</span></div>
+      </div>
+      <div class="phone">
+        <div class="titlebar">Logs</div>
+        <div class="log-line">TidyTrail deletion log</div>
+        <div class="log-line">Planned at: 2026-09-16T18:02:11Z</div>
+        <div class="log-line">Items: 3 · Total size: 281 MB</div>
+        <div class="log-line deleted">[DELETED] IMG_0231-copy.mov</div>
+        <div class="log-line deleted">[DELETED] export_final.mp4</div>
+        <div class="log-line">[FAILED (in use)] backup-2026.zip</div>
+      </div>
+      <div class="phone">
+        <div class="titlebar">Storage</div>
+        <div class="row"><span class="swatch"></span><span class="fname">Total capacity</span><span class="fsize">256 GB</span></div>
+        <div class="row"><span class="swatch"></span><span class="fname">Available</span><span class="fsize">38 GB</span></div>
+        <div class="row"><span class="swatch"></span><span class="fname">Used</span><span class="fsize">218 GB</span></div>
+      </div>
+    </div>
+    <p class="caption">Scan a picked folder → review duplicates/large files → delete with a log → check past logs anytime.</p>
+  </div>
+</section>
+
+<section id="build">
+  <div class="wrap">
+    <h2>Architecture</h2>
+    <p class="lede">SwiftUI app on top of a pure-Swift core package, with the Xcode project generated rather than hand-maintained.</p>
+    <div class="grid3">
+      <div class="card">
+        <h3>TidyTrailCore</h3>
+        <p>Foundation + CryptoKit only, no UIKit. Scanning, duplicate detection, and the delete-then-log engine, covered by XCTest unit tests.</p>
+      </div>
+      <div class="card">
+        <h3>XcodeGen</h3>
+        <p><code>project.yml</code> is the source of truth — the <code>.xcodeproj</code> is generated, so the project stays diffable and editable without Xcode.</p>
+      </div>
+      <div class="card">
+        <h3>GitHub Actions CI</h3>
+        <p>Runs <code>swift test</code> and a full simulator build on a macOS runner on every push — the actual build/test loop, since development happens from a machine with no local Xcode.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>MIT licensed. Source, issues, and the full README at <a href="https://github.com/sunilgentyala/TidyTrail">github.com/sunilgentyala/TidyTrail</a>. Read the <a href="privacy.html">privacy policy</a>.</p>
+  </div>
+</footer>
+
+</body>
+</html>
