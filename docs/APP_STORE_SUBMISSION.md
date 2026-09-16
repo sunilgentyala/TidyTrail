@@ -83,8 +83,8 @@ and uploads a build to TestFlight. From there:
    confirm the build installs and works on a real device.
 2. Fill in the App Store listing: screenshots (required sizes per device
    class), description, keywords, support URL, and **privacy policy URL** -
-   use `https://sunilgentyala.github.io/TidyTrail/privacy.html` (already
-   written and live once GitHub Pages is enabled - see below). For the
+   use `https://sunilgentyala.com/TidyTrail/privacy.html` (already written
+   and live - verified reachable over HTTPS). For the
    privacy "nutrition label" (App Store Connect > App Privacy): TidyTrail
    makes no network requests and collects nothing, so this should be a
    straightforward "Data Not Collected" declaration - confirm that's still
@@ -97,8 +97,8 @@ and uploads a build to TestFlight. From there:
   `Sources/TidyTrail/Assets.xcassets/AppIcon.appiconset/AppIcon.png`
   (generated, not a placeholder). Replace it if you want different branding.
 - Privacy policy: written and published at
-  `docs/privacy.html` → `https://sunilgentyala.github.io/TidyTrail/privacy.html`.
-- Landing page: `https://sunilgentyala.github.io/TidyTrail/` - useful for the
+  `docs/privacy.html` → `https://sunilgentyala.com/TidyTrail/privacy.html`.
+- Landing page: `https://sunilgentyala.com/TidyTrail/` - useful for the
   App Store listing's "marketing URL" field.
 
 ## Things only you can decide/provide

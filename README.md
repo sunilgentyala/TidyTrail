@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/status-pre--release-orange" alt="Pre-release">
 </p>
 
-<p align="center"><b>sunilgentyala.github.io/TidyTrail</b></p>
+<p align="center"><b>sunilgentyala.com/TidyTrail</b></p>
 
 An iOS storage organizer that finds duplicate and large files in folders you
 choose, and writes a plain-text log of exactly what it deleted - before it
