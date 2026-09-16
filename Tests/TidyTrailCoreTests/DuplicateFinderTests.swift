@@ -14,7 +14,7 @@ final class DuplicateFinderTests: XCTestCase {
     }
 
     func testFindsExactDuplicatesByContentNotJustSize() throws {
-        let contentA = Data("hello tidytrail".utf8)
+        let contentA = Data("hello tidytrail!".utf8)
         let contentBSameSize = Data("totally-diff-16!".utf8) // same length as contentA, different bytes
         XCTAssertEqual(contentA.count, contentBSameSize.count)
 

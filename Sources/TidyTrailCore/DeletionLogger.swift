@@ -22,15 +22,15 @@ public struct DeletionRecord: Sendable {
 ///
 /// The log always reflects what actually happened, not just what was planned,
 /// so a failed deletion is never silently reported as successful.
-public struct DeletionLogger: Sendable {
+public struct DeletionLogger: @unchecked Sendable {
     private let logsDirectory: URL
     private let fileManager: FileManager
-    private let dateProvider: @Sendable () -> Date
+    private let dateProvider: () -> Date
 
     public init(
         logsDirectory: URL,
         fileManager: FileManager = .default,
-        dateProvider: @escaping @Sendable () -> Date = Date.init
+        dateProvider: @escaping () -> Date = Date.init
     ) {
         self.logsDirectory = logsDirectory
         self.fileManager = fileManager
