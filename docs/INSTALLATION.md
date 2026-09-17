@@ -53,3 +53,19 @@ After running the "Release to TestFlight" GitHub Actions workflow (see
 TidyTrail asks for folder access only when you tap "Choose Folder" inside
 the app (the standard iOS Files picker) - there is no separate permission
 prompt to accept up front.
+
+## Mac app
+
+1. Actions tab > "Build Mac App (.dmg)" > Run workflow, then download
+   `TidyTrail-dmg` from the finished run's artifacts (or, if the workflow
+   was pointed at a release tag, from that release's assets).
+2. Open `TidyTrail.dmg`, drag `TidyTrail.app` to the `Applications` shortcut
+   next to it.
+3. First launch: since this isn't yet notarized (see
+   [`MAC_APP_DISTRIBUTION.md`](MAC_APP_DISTRIBUTION.md)), Gatekeeper will
+   say it's from an unidentified developer - right-click `TidyTrail.app` >
+   **Open** > Open, once. After that it opens normally.
+
+TidyTrail for Mac asks for folder access only when you click "Choose
+Folder…" (the standard `NSOpenPanel`) - same as the iPhone app, no upfront
+permission prompt.

@@ -68,7 +68,7 @@ private struct EmptyTrashPlaceholder: View {
                 .foregroundStyle(.secondary)
             Text("Trash is empty")
                 .font(.headline)
-            Text("Files you delete from the Scan tab stay here for 30 days so you can restore them, before they're removed for good.")
+            Text("Files you delete from the Scan screen stay here for 30 days so you can restore them, before they're removed for good.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

@@ -38,3 +38,27 @@ jobs:
             -scheme TidyTrail \
             -destination "generic/platform=iOS Simulator" \
             CODE_SIGNING_ALLOWED=NO
+
+  mac-app-build:
+    name: macOS app build (XcodeGen + xcodebuild)
+    runs-on: macos-14
+    needs: core-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select latest available Xcode
+        run: |
+          LATEST=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -n1)
+          echo "Selecting $LATEST"
+          sudo xcode-select -s "$LATEST"
+          xcodebuild -version
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build for macOS (no code signing)
+        run: |
+          xcodebuild build \
+            -project TidyTrail.xcodeproj \
+            -scheme TidyTrailMac \
+            -destination "generic/platform=macOS" \
+            CODE_SIGNING_ALLOWED=NO

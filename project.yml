@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.sunilgentyala
   deploymentTarget:
     iOS: "16.0"
+    macOS: "13.0"
   createIntermediateGroups: true
 configs:
   Debug: debug
@@ -10,9 +11,8 @@ configs:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "1.1.0"
-    CURRENT_PROJECT_VERSION: "2"
-    TARGETED_DEVICE_FAMILY: "1"
+    MARKETING_VERSION: "1.2.0"
+    CURRENT_PROJECT_VERSION: "3"
 packages:
   TidyTrailCore:
     path: .
@@ -23,6 +23,7 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - path: Sources/TidyTrail
+      - path: Sources/TidyTrailUI
     dependencies:
       - package: TidyTrailCore
         product: TidyTrailCore
@@ -35,6 +36,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:
+        TARGETED_DEVICE_FAMILY: "1"
         PRODUCT_BUNDLE_IDENTIFIER: com.sunilgentyala.tidytrail
         PRODUCT_NAME: TidyTrail
         CODE_SIGN_STYLE: Automatic
@@ -55,6 +57,32 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: true
 
+  TidyTrailMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: Sources/TidyTrailMac
+      - path: Sources/TidyTrailUI
+    dependencies:
+      - package: TidyTrailCore
+        product: TidyTrailCore
+    info:
+      path: Generated/Info-Mac.plist
+      properties:
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sunilgentyala.tidytrail.mac
+        PRODUCT_NAME: TidyTrail
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Sources/TidyTrailMac/TidyTrailMac.entitlements
+        GENERATE_INFOPLIST_FILE: true
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_HARDENED_RUNTIME: true
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+
 schemes:
   TidyTrail:
     build:
@@ -64,3 +92,8 @@ schemes:
     test:
       targets:
         - TidyTrailUnitTests
+
+  TidyTrailMac:
+    build:
+      targets:
+        TidyTrailMac: all

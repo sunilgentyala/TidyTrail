@@ -55,7 +55,7 @@ private struct ContentUnavailableViewCompat: View {
                 .foregroundStyle(.secondary)
             Text("No deletion logs yet")
                 .font(.headline)
-            Text("Logs appear here after you delete files from the Scan tab.")
+            Text("Logs appear here after you delete files from the Scan screen.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

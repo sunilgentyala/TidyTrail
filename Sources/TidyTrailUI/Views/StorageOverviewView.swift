@@ -2,8 +2,9 @@ import SwiftUI
 import TidyTrailCore
 
 /// Shows device-wide free/used storage using the public volume capacity APIs.
-/// This is informational only - iOS does not let a third-party app break this
-/// number down by other apps' caches, so TidyTrail does not claim to.
+/// This is informational only - Apple's app sandboxing does not let a
+/// third-party app break this number down by other apps' data, so TidyTrail
+/// does not claim to, on either platform.
 struct StorageOverviewView: View {
     @State private var totalCapacity: Int64?
     @State private var availableCapacity: Int64?
@@ -23,7 +24,7 @@ struct StorageOverviewView: View {
                 }
 
                 Section {
-                    Text("iOS keeps each app's storage sandboxed, so TidyTrail can only report the device total and clean folders you explicitly pick - it cannot see or clear other apps' caches.")
+                    Text("TidyTrail can only report the volume total and clean folders you explicitly pick - it cannot see or clear other apps' data.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

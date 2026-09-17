@@ -1,0 +1,103 @@
+name: Build Mac App (.dmg)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing GitHub release tag to attach the .dmg to (e.g. v1.1.0). Leave blank to just produce a downloadable build artifact."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-dmg:
+    name: Build, sign, and package TidyTrail.app as a .dmg
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest available Xcode
+        run: |
+          LATEST=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -n1)
+          echo "Selecting $LATEST"
+          sudo xcode-select -s "$LATEST"
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      # Real Developer ID signing + notarization (so macOS's Gatekeeper never
+      # warns on download) needs a paid Apple Developer account's Developer
+      # ID Application certificate - only the account owner can create that.
+      # See docs/MAC_APP_DISTRIBUTION.md. Until those secrets exist, this ad-hoc
+      # signature still satisfies App Sandbox/entitlements for a locally-run
+      # or right-click-Open'd copy - it just won't pass Gatekeeper silently.
+      - name: Build Release .app (ad-hoc signed)
+        run: |
+          xcodebuild build \
+            -project TidyTrail.xcodeproj \
+            -scheme TidyTrailMac \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM=""
+
+      - name: Notarize and staple (only if Developer ID secrets are configured)
+        if: ${{ secrets.MAC_DEVELOPER_ID_CERT_P12 != '' }}
+        env:
+          MAC_DEVELOPER_ID_CERT_P12: ${{ secrets.MAC_DEVELOPER_ID_CERT_P12 }}
+          MAC_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_CERT_PASSWORD }}
+          MAC_DEVELOPER_ID_IDENTITY: ${{ secrets.MAC_DEVELOPER_ID_IDENTITY }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          NOTARY_APP_SPECIFIC_PASSWORD: ${{ secrets.NOTARY_APP_SPECIFIC_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/tidytrail-signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 24)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "$MAC_DEVELOPER_ID_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN_PATH" -P "$MAC_DEVELOPER_ID_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" "$(security list-keychains -d user | sed 's/"//g')"
+
+          APP_PATH="build/Build/Products/Release/TidyTrail.app"
+          codesign --force --deep --options runtime \
+            --entitlements Sources/TidyTrailMac/TidyTrailMac.entitlements \
+            --sign "$MAC_DEVELOPER_ID_IDENTITY" --keychain "$KEYCHAIN_PATH" "$APP_PATH"
+
+          ditto -c -k --keepParent "$APP_PATH" "$RUNNER_TEMP/TidyTrail.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/TidyTrail.zip" \
+            --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" \
+            --password "$NOTARY_APP_SPECIFIC_PASSWORD" --wait
+          xcrun stapler staple "$APP_PATH"
+
+      - name: Package as .dmg
+        run: |
+          APP_PATH="build/Build/Products/Release/TidyTrail.app"
+          DMG_STAGING="$RUNNER_TEMP/dmg-staging"
+          mkdir -p "$DMG_STAGING"
+          cp -R "$APP_PATH" "$DMG_STAGING/"
+          ln -s /Applications "$DMG_STAGING/Applications"
+          hdiutil create -volname "TidyTrail" -srcfolder "$DMG_STAGING" -ov -format UDZO TidyTrail.dmg
+
+      - name: Upload .dmg as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TidyTrail-dmg
+          path: TidyTrail.dmg
+
+      - name: Attach .dmg to a GitHub release
+        if: ${{ inputs.release_tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.release_tag }}" TidyTrail.dmg --clobber

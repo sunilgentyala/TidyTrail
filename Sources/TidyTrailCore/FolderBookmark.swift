@@ -4,14 +4,13 @@ import Foundation
 /// later - for a one-tap rescan, and so a trashed item can be restored to its
 /// original folder even after the picker session that trashed it has ended.
 ///
-/// Without this, iOS drops access to a folder as soon as the picker session
-/// that granted it ends, and every rescan or restore would need the user to
-/// walk through the folder picker again. No `.withSecurityScope` option is
-/// used here: that flag is macOS-only (App Sandbox Powerbox integration) and
-/// isn't how `UIDocumentPickerViewController` grants are meant to be
-/// persisted on iOS - a plain bookmark plus
+/// Without this, the app drops access to a folder as soon as the picker
+/// session that granted it ends, and every rescan or restore would need the
+/// user to pick it again. `.withSecurityScope` is macOS-only (it's how a
+/// sandboxed Mac app's Powerbox-granted `NSOpenPanel` selection survives a
+/// relaunch); on iOS, a plain bookmark plus
 /// `startAccessingSecurityScopedResource()` on the resolved URL is Apple's
-/// documented pattern for that picker.
+/// documented pattern for a `UIDocumentPickerViewController` grant instead.
 public struct FolderBookmark: Sendable, Codable, Identifiable, Equatable {
     public let id: UUID
     public let displayName: String
@@ -26,9 +25,15 @@ public struct FolderBookmark: Sendable, Codable, Identifiable, Equatable {
     }
 
     /// Creates a bookmark for `url`, which must already be accessible -
-    /// typically the URL just handed over by `UIDocumentPickerViewController`.
+    /// typically the URL just handed over by `UIDocumentPickerViewController`
+    /// (iOS) or `NSOpenPanel` (macOS).
     public static func make(for url: URL) throws -> FolderBookmark {
-        let data = try url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
+        #if os(macOS)
+        let options: URL.BookmarkCreationOptions = [.withSecurityScope]
+        #else
+        let options: URL.BookmarkCreationOptions = []
+        #endif
+        let data = try url.bookmarkData(options: options, includingResourceValuesForKeys: nil, relativeTo: nil)
         return FolderBookmark(displayName: url.lastPathComponent, data: data)
     }
 
@@ -37,7 +42,12 @@ public struct FolderBookmark: Sendable, Codable, Identifiable, Equatable {
     /// returned URL when done, but only if `didStartAccessing` is true.
     public func resolve() throws -> (url: URL, didStartAccessing: Bool) {
         var isStale = false
-        let url = try URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &isStale)
+        #if os(macOS)
+        let options: URL.BookmarkResolutionOptions = [.withSecurityScope]
+        #else
+        let options: URL.BookmarkResolutionOptions = []
+        #endif
+        let url = try URL(resolvingBookmarkData: data, options: options, relativeTo: nil, bookmarkDataIsStale: &isStale)
         let didStart = url.startAccessingSecurityScopedResource()
         return (url, didStart)
     }
