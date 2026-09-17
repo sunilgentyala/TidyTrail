@@ -50,8 +50,14 @@ jobs:
             CODE_SIGNING_ALLOWED=YES \
             DEVELOPMENT_TEAM=""
 
+      - name: Check for Developer ID secrets
+        id: check_secrets
+        env:
+          MAC_DEVELOPER_ID_CERT_P12: ${{ secrets.MAC_DEVELOPER_ID_CERT_P12 }}
+        run: echo "configured=${{ secrets.MAC_DEVELOPER_ID_CERT_P12 != '' }}" >> "$GITHUB_OUTPUT"
+
       - name: Notarize and staple (only if Developer ID secrets are configured)
-        if: ${{ secrets.MAC_DEVELOPER_ID_CERT_P12 != '' }}
+        if: steps.check_secrets.outputs.configured == 'true'
         env:
           MAC_DEVELOPER_ID_CERT_P12: ${{ secrets.MAC_DEVELOPER_ID_CERT_P12 }}
           MAC_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_CERT_PASSWORD }}
