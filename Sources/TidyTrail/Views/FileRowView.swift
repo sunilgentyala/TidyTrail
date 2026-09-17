@@ -9,19 +9,37 @@ struct FileRowView: View {
     var body: some View {
         Button(action: onToggle) {
             HStack {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? .blue : .secondary)
+                Image(systemName: checkmarkSymbolName)
+                    .foregroundStyle(item.isDownloaded ? (isSelected ? .blue : .secondary) : .secondary)
                 VStack(alignment: .leading) {
-                    Text(item.name)
-                        .lineLimit(1)
-                    Text(ByteFormatter.string(fromBytes: item.size))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(item.name)
+                            .lineLimit(1)
+                        if !item.isDownloaded {
+                            Image(systemName: "icloud.and.arrow.down")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if item.isDownloaded {
+                        Text(ByteFormatter.string(fromBytes: item.size))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("\(ByteFormatter.string(fromBytes: item.size)) - open it once to check for duplicates")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!item.isDownloaded)
+    }
+
+    private var checkmarkSymbolName: String {
+        guard item.isDownloaded else { return "circle.dashed" }
+        return isSelected ? "checkmark.circle.fill" : "circle"
     }
 }

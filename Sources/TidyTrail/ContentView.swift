@@ -6,6 +6,9 @@ struct ContentView: View {
             ScanResultsView()
                 .tabItem { Label("Scan", systemImage: "magnifyingglass") }
 
+            TrashView()
+                .tabItem { Label("Trash", systemImage: "trash") }
+
             DeletionLogsView()
                 .tabItem { Label("Logs", systemImage: "doc.text") }
 

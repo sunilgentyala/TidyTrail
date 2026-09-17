@@ -13,7 +13,20 @@ struct ScanResultsView: View {
                     Section {
                         HStack {
                             ProgressView()
-                            Text("Scanning…")
+                            Text("Scanning… \(viewModel.scannedCount) files found")
+                            Spacer()
+                            Button("Cancel") { viewModel.cancelScan() }
+                        }
+                    }
+                }
+
+                if !viewModel.isScanning && viewModel.scannedItems.isEmpty && !viewModel.recentFolders.isEmpty {
+                    Section("Recent Folders") {
+                        ForEach(viewModel.recentFolders) { bookmark in
+                            Button(bookmark.displayName) { viewModel.rescan(bookmark) }
+                                .swipeActions {
+                                    Button("Forget", role: .destructive) { viewModel.forgetFolder(bookmark) }
+                                }
                         }
                     }
                 }
@@ -26,7 +39,7 @@ struct ScanResultsView: View {
                 }
 
                 if !viewModel.duplicateGroups.isEmpty {
-                    Section("Duplicates (keeping the newest copy)") {
+                    Section {
                         ForEach(Array(viewModel.duplicateGroups.enumerated()), id: \.offset) { _, group in
                             ForEach(group.dropFirst(), id: \.url) { item in
                                 FileRowView(
@@ -35,6 +48,14 @@ struct ScanResultsView: View {
                                     onToggle: { viewModel.toggleSelection(item) }
                                 )
                             }
+                        }
+                    } header: {
+                        HStack {
+                            Text("Duplicates (keeping the newest copy)")
+                            Spacer()
+                            Button("Select All") { viewModel.selectAllDuplicates() }
+                                .font(.caption)
+                                .textCase(nil)
                         }
                     }
                 }
@@ -57,7 +78,7 @@ struct ScanResultsView: View {
                     }
                 }
 
-                if viewModel.scannedItems.isEmpty && !viewModel.isScanning {
+                if viewModel.scannedItems.isEmpty && !viewModel.isScanning && viewModel.recentFolders.isEmpty {
                     Section {
                         Text("Choose a folder to scan. TidyTrail can only see files you explicitly pick - iOS does not allow apps to scan the whole device.")
                             .foregroundStyle(.secondary)
@@ -78,20 +99,20 @@ struct ScanResultsView: View {
             }
             .sheet(isPresented: $isShowingPicker) {
                 FolderPickerView { url in
-                    viewModel.scan(folder: url)
+                    viewModel.pickedFolder(url)
                 }
             }
             .confirmationDialog(
-                "Delete \(viewModel.selectedForDeletion.count) file(s)?",
+                "Move \(viewModel.selectedForDeletion.count) file(s) to Trash?",
                 isPresented: $isShowingDeleteConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("Delete and Log", role: .destructive) {
+                Button("Move to Trash", role: .destructive) {
                     viewModel.deleteSelected()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("A text log of what was deleted will be written to Files > TidyTrail Logs before anything is removed.")
+                Text("A log will be written to Files > TidyTrail Logs first. Files move to the Trash tab, recoverable for 30 days, rather than being deleted right away.")
             }
         }
     }

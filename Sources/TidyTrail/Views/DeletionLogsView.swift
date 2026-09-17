@@ -4,10 +4,7 @@ struct DeletionLogsView: View {
     @State private var logFiles: [URL] = []
     @State private var selectedLogContent: LogContent?
 
-    private var logsDirectory: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("TidyTrail Logs", isDirectory: true)
-    }
+    private var logsDirectory: URL { AppStorageLocations.logsDirectory }
 
     var body: some View {
         NavigationStack {

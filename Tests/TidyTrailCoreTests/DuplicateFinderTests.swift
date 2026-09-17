@@ -45,4 +45,28 @@ final class DuplicateFinderTests: XCTestCase {
         let duplicates = try DuplicateFinder().findDuplicates(in: items)
         XCTAssertTrue(duplicates.isEmpty)
     }
+
+    func testIgnoresUndownloadedICloudPlaceholdersEvenIfContentWouldMatch() throws {
+        let contentA = Data("hello tidytrail!".utf8)
+        try contentA.write(to: tempDir.appendingPathComponent("local.txt"))
+        try contentA.write(to: tempDir.appendingPathComponent("also-local.txt"))
+
+        var items = try StorageScanner().scan(rootURL: tempDir)
+        XCTAssertEqual(items.count, 2)
+
+        // Simulate one of the two matches being an iCloud placeholder that
+        // hasn't been downloaded - it should never be hashed or flagged.
+        let placeholderIndex = items.firstIndex { $0.name == "also-local.txt" }!
+        let placeholder = items[placeholderIndex]
+        items[placeholderIndex] = FileItem(
+            url: placeholder.url,
+            name: placeholder.name,
+            size: placeholder.size,
+            modificationDate: placeholder.modificationDate,
+            isDownloaded: false
+        )
+
+        let duplicates = try DuplicateFinder().findDuplicates(in: items)
+        XCTAssertTrue(duplicates.isEmpty, "a lone downloaded file with no downloaded match should not be flagged as a duplicate")
+    }
 }

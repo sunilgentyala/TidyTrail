@@ -11,8 +11,11 @@ public struct DuplicateFinder: Sendable {
 
     /// Returns groups of duplicate files, newest-modified first in each group.
     /// Zero-byte files are ignored since "empty file" is not a meaningful duplicate.
+    /// iCloud placeholders that haven't been downloaded yet are ignored too -
+    /// their content can't be hashed without forcing a download, so TidyTrail
+    /// can't tell whether they're actually duplicates until the user opens them.
     public func findDuplicates(in items: [FileItem]) throws -> [[FileItem]] {
-        let bySize = Dictionary(grouping: items.filter { $0.size > 0 }, by: \.size)
+        let bySize = Dictionary(grouping: items.filter { $0.size > 0 && $0.isDownloaded }, by: \.size)
         var duplicateGroups: [[FileItem]] = []
 
         for (_, candidates) in bySize where candidates.count > 1 {
