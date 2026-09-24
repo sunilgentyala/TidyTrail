@@ -41,11 +41,18 @@ final class ScanViewModel: ObservableObject {
     /// bookmark so it can be rescanned (or restored into) without picking
     /// again, then scans it.
     func pickedFolder(_ url: URL) {
-        let bookmark = try? FolderBookmark.make(for: url)
-        if let bookmark {
-            recentFolders = (try? bookmarkStore.remember(bookmark)) ?? recentFolders
+        var storedID: UUID?
+        if let bookmark = try? FolderBookmark.make(for: url) {
+            // Folders the trash still needs for restores are never evicted
+            // from the recent list, and re-picking a known folder keeps its
+            // original id - so use the id of the bookmark as *stored*.
+            let referencedByTrash = Set(trashStore.loadManifest().compactMap(\.folderBookmarkID))
+            if let updated = try? bookmarkStore.remember(bookmark, keeping: referencedByTrash) {
+                recentFolders = updated
+                storedID = updated.first?.id
+            }
         }
-        performScan(folderBookmarkID: bookmark?.id) { (url, {}) }
+        performScan(folderBookmarkID: storedID) { (url, {}) }
     }
 
     /// Re-opens a previously bookmarked folder and scans it again.
@@ -95,15 +102,21 @@ final class ScanViewModel: ObservableObject {
                     },
                     isCancelled: { Task.isCancelled }
                 )
-                let duplicates = try duplicateFinder.findDuplicates(in: items)
+                let duplicates = try duplicateFinder.findDuplicates(in: items, isCancelled: { Task.isCancelled })
+                // A newer scan may have cancelled this one after its last
+                // cancellation check; its results must not overwrite the
+                // newer scan's (or clear its isScanning state).
+                try Task.checkCancellation()
                 await MainActor.run {
                     self.scannedItems = items
                     self.duplicateGroups = duplicates
                     self.isScanning = false
                 }
             } catch is CancellationError {
-                await MainActor.run { self.isScanning = false }
+                // Only clear the spinner if no newer scan has taken over.
+                await MainActor.run { if self.scanTask?.isCancelled ?? true { self.isScanning = false } }
             } catch {
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
                     self.isScanning = false
@@ -134,9 +147,14 @@ final class ScanViewModel: ObservableObject {
         let logger = DeletionLogger(logsDirectory: AppStorageLocations.logsDirectory, trashStore: trashStore)
         let folderBookmarkID = currentFolderBookmarkID
 
+        // Moving files (a full copy when the source is on another volume or
+        // file provider) runs off the main actor, like scanning does, so a
+        // big delete can't freeze the UI.
         Task {
             do {
-                let result = try logger.trashWithLog(items: itemsToDelete, folderBookmarkID: folderBookmarkID)
+                let result = try await Task.detached(priority: .userInitiated) {
+                    try logger.trashWithLog(items: itemsToDelete, folderBookmarkID: folderBookmarkID)
+                }.value
                 lastLogURL = result.logURL
                 let trashedURLs = Set(result.records.compactMap { record -> URL? in
                     guard case .trashed = record.outcome else { return nil }
@@ -144,7 +162,18 @@ final class ScanViewModel: ObservableObject {
                 })
                 scannedItems.removeAll { trashedURLs.contains($0.url) }
                 selectedForDeletion.subtract(trashedURLs)
-                duplicateGroups = try duplicateFinder.findDuplicates(in: scannedItems)
+                // Removing files can only shrink duplicate groups, so update
+                // them in place instead of re-hashing every candidate on the
+                // main thread (the old behavior, after every single delete).
+                duplicateGroups = duplicateGroups
+                    .map { $0.filter { !trashedURLs.contains($0.url) } }
+                    .filter { $0.count > 1 }
+                let failures = result.records.filter {
+                    if case .failed = $0.outcome { return true } else { return false }
+                }
+                if !failures.isEmpty {
+                    errorMessage = "\(failures.count) of \(result.records.count) items couldn't be moved to the Trash. See the deletion log for details."
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }

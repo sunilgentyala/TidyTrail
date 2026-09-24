@@ -69,6 +69,28 @@ final class DeletionLoggerTests: XCTestCase {
         XCTAssertTrue(spy.logContentsAtFirstMoveCall?.contains("PENDING") ?? false)
         XCTAssertTrue(spy.logContentsAtFirstMoveCall?.contains("ordering.txt") ?? false)
     }
+
+    func testFileNamesCannotForgeExtraLogEntries() throws {
+        let forgedName = "innocent.txt\n[TRASHED] /System/forged"
+        let url = tempDir.appendingPathComponent(forgedName)
+        try Data("x".utf8).write(to: url)
+        let item = FileItem(url: url, name: forgedName, size: 1, modificationDate: Date())
+
+        let logger = DeletionLogger(logsDirectory: logsDir, trashStore: TrashStore(trashDirectory: trashDir))
+        let result = try logger.trashWithLog(items: [item], folderBookmarkID: nil)
+
+        let log = try String(contentsOf: result.logURL, encoding: .utf8)
+        let entryLines = log.split(separator: "\n").filter { $0.hasPrefix("[") }
+        XCTAssertEqual(entryLines.count, 1, "one item must produce exactly one entry line:\n\(log)")
+        XCTAssertTrue(log.contains(#"innocent.txt\n[TRASHED] /System/forged"#))
+    }
+
+    func testEscapingIsReversibleForBackslashes() {
+        XCTAssertEqual(DeletionLogger.escaped(#"a\nb"#), #"a\\nb"#)
+        XCTAssertEqual(DeletionLogger.escaped("a\nb"), #"a\nb"#)
+        XCTAssertEqual(DeletionLogger.escaped("tab\there"), #"tab\there"#)
+        XCTAssertEqual(DeletionLogger.escaped("esc\u{1B}"), #"esc\u{1B}"#)
+    }
 }
 
 /// Captures the on-disk log contents at the moment the first `moveItem`

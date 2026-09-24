@@ -9,14 +9,20 @@ on:
         default: ""
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-dmg:
     name: Build, sign, and package TidyTrail.app as a .dmg
     runs-on: macos-14
+    permissions:
+      contents: write # attach the .dmg to a release
+      id-token: write # sign the build-provenance attestation
+      attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Select latest available Xcode
         run: |
@@ -96,14 +102,27 @@ jobs:
           ln -s /Applications "$DMG_STAGING/Applications"
           hdiutil create -volname "TidyTrail" -srcfolder "$DMG_STAGING" -ov -format UDZO TidyTrail.dmg
 
+      # Checksum + signed SLSA provenance, so an installer can verify the
+      # download (`shasum -a 256 -c TidyTrail.dmg.sha256` and
+      # `gh attestation verify TidyTrail.dmg --repo sunilgentyala/TidyTrail`).
+      - name: Generate SHA-256 checksum
+        run: shasum -a 256 TidyTrail.dmg | tee TidyTrail.dmg.sha256
+
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: TidyTrail.dmg
+
       - name: Upload .dmg as a workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: TidyTrail-dmg
-          path: TidyTrail.dmg
+          path: |
+            TidyTrail.dmg
+            TidyTrail.dmg.sha256
 
       - name: Attach .dmg to a GitHub release
         if: ${{ inputs.release_tag != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ inputs.release_tag }}" TidyTrail.dmg --clobber
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: gh release upload "$RELEASE_TAG" TidyTrail.dmg TidyTrail.dmg.sha256 --clobber

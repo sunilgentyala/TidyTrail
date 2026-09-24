@@ -3,12 +3,19 @@ name: Release to TestFlight
 on:
   workflow_dispatch: {}
 
+# Signing and upload use App Store Connect / match secrets, not the GitHub
+# token, so the token only needs to read the repo.
+permissions:
+  contents: read
+
 jobs:
   beta:
     name: Build, sign, and upload to TestFlight
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Select latest available Xcode
         run: |

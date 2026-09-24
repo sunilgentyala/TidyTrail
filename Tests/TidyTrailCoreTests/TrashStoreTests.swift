@@ -93,6 +93,75 @@ final class TrashStoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: trashDir.appendingPathComponent(trashedNew.trashedFileName).path))
     }
 
+    /// Writes a manifest by hand, the way someone editing the file-shared
+    /// Documents folder (or a sync/backup tool) could.
+    private func writeTamperedManifest(_ items: [TrashedItem]) throws {
+        try FileManager.default.createDirectory(at: trashDir, withIntermediateDirectories: true)
+        try JSONEncoder().encode(items).write(to: trashDir.appendingPathComponent("manifest.json"))
+    }
+
+    func testTamperedManifestCannotDeleteFilesOutsideTheTrash() throws {
+        let victim = try makeFile(named: "victim.txt", in: tempDir)
+        let evil = TrashedItem(
+            originalURL: victim.url,
+            trashedFileName: "../victim.txt",
+            name: "victim.txt",
+            size: 1,
+            trashedDate: .distantPast,
+            folderBookmarkID: nil
+        )
+        try writeTamperedManifest([evil])
+        let store = TrashStore(trashDirectory: trashDir)
+
+        XCTAssertTrue(store.loadManifest().isEmpty, "unsafe entries must be dropped on load")
+        _ = try store.purgeExpired()
+        XCTAssertThrowsError(try store.deleteForever(evil))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: victim.url.path))
+    }
+
+    func testTamperedManifestCannotRestoreOutsideTheDestinationFolder() throws {
+        let item = try makeFile(named: "e.txt", in: originalDir)
+        let store = TrashStore(trashDirectory: trashDir)
+        let trashed = try store.moveToTrash(item: item, folderBookmarkID: nil)
+
+        let evil = TrashedItem(
+            id: trashed.id,
+            originalURL: trashed.originalURL,
+            trashedFileName: trashed.trashedFileName,
+            name: "../escaped.txt",
+            size: trashed.size,
+            trashedDate: trashed.trashedDate,
+            folderBookmarkID: nil
+        )
+        try writeTamperedManifest([evil])
+
+        XCTAssertTrue(store.loadManifest().isEmpty)
+        XCTAssertThrowsError(try store.restore(evil, to: originalDir))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tempDir.appendingPathComponent("escaped.txt").path))
+    }
+
+    func testVeryLongFileNamesCanStillBeTrashed() throws {
+        let longName = String(repeating: "a", count: 250) + ".txt"
+        let item = try makeFile(named: longName, in: originalDir)
+        let store = TrashStore(trashDirectory: trashDir)
+
+        let trashed = try store.moveToTrash(item: item, folderBookmarkID: nil)
+
+        XCTAssertLessThanOrEqual(trashed.trashedFileName.utf8.count, 255)
+        XCTAssertEqual(trashed.name, longName)
+        let restored = try store.restore(trashed, to: originalDir)
+        XCTAssertEqual(restored.lastPathComponent, longName)
+    }
+
+    func testSafeFileNameRules() {
+        XCTAssertTrue(TrashStore.isSafeFileName("report: final.txt"))
+        XCTAssertFalse(TrashStore.isSafeFileName(""))
+        XCTAssertFalse(TrashStore.isSafeFileName("."))
+        XCTAssertFalse(TrashStore.isSafeFileName(".."))
+        XCTAssertFalse(TrashStore.isSafeFileName("a/b"))
+        XCTAssertFalse(TrashStore.isSafeFileName("../x"))
+    }
+
     func testExpirationDateIsTrashedDatePlusRetention() {
         let trashedDate = Date()
         let store = TrashStore(trashDirectory: trashDir, retentionInterval: 30 * 86400)

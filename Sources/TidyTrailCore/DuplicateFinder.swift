@@ -14,14 +14,22 @@ public struct DuplicateFinder: Sendable {
     /// iCloud placeholders that haven't been downloaded yet are ignored too -
     /// their content can't be hashed without forcing a download, so TidyTrail
     /// can't tell whether they're actually duplicates until the user opens them.
-    public func findDuplicates(in items: [FileItem]) throws -> [[FileItem]] {
+    ///
+    /// A file that can't be read (deleted or locked since the scan) is left
+    /// out rather than failing the whole search. `isCancelled` is polled
+    /// between files, since hashing a large folder can take much longer
+    /// than listing it.
+    public func findDuplicates(in items: [FileItem], isCancelled: (() -> Bool)? = nil) throws -> [[FileItem]] {
         let bySize = Dictionary(grouping: items.filter { $0.size > 0 && $0.isDownloaded }, by: \.size)
         var duplicateGroups: [[FileItem]] = []
 
         for (_, candidates) in bySize where candidates.count > 1 {
             var byHash: [String: [FileItem]] = [:]
             for item in candidates {
-                let hash = try Self.hash(of: item.url)
+                if isCancelled?() == true {
+                    throw CancellationError()
+                }
+                guard let hash = try? Self.hash(of: item.url) else { continue }
                 byHash[hash, default: []].append(item)
             }
             for group in byHash.values where group.count > 1 {

@@ -47,10 +47,15 @@ public struct StorageScanner: Sendable {
             .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey
         ]
 
+        // One unreadable subfolder or file (permissions, a file removed
+        // mid-scan, a provider hiccup) must not throw away the whole scan:
+        // skip it and keep going, the same way `DuplicateFinder` skips files
+        // it can't hash.
         guard let enumerator = fileManager.enumerator(
             at: rootURL,
             includingPropertiesForKeys: resourceKeys,
-            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+            options: [.skipsHiddenFiles, .skipsPackageDescendants],
+            errorHandler: { _, _ in true }
         ) else {
             throw ScanError.accessDenied(rootURL)
         }
@@ -61,8 +66,8 @@ public struct StorageScanner: Sendable {
                 throw CancellationError()
             }
 
-            let values = try fileURL.resourceValues(forKeys: Set(resourceKeys))
-            guard values.isRegularFile == true else { continue }
+            guard let values = try? fileURL.resourceValues(forKeys: Set(resourceKeys)),
+                  values.isRegularFile == true else { continue }
             let size = Int64(values.fileSize ?? 0)
             let modDate = values.contentModificationDate ?? Date.distantPast
             let isDownloaded = Self.isContentAvailableLocally(values)

@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Keeps the SHA-pinned actions in .github/workflows current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # fastlane (release pipeline only; not shipped in the app).
+  - package-ecosystem: bundler
+    directory: /
+    schedule:
+      interval: weekly

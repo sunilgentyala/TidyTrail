@@ -31,6 +31,31 @@ final class DuplicateFinderTests: XCTestCase {
         XCTAssertTrue(duplicates.first?.allSatisfy { $0.name == "one.txt" || $0.name == "one-copy.txt" } ?? false)
     }
 
+    func testAFileRemovedAfterScanningIsSkippedNotFatal() throws {
+        let content = Data("same bytes here".utf8)
+        try content.write(to: tempDir.appendingPathComponent("a.txt"))
+        try content.write(to: tempDir.appendingPathComponent("b.txt"))
+        try content.write(to: tempDir.appendingPathComponent("c.txt"))
+        let items = try StorageScanner().scan(rootURL: tempDir)
+
+        try FileManager.default.removeItem(at: tempDir.appendingPathComponent("c.txt"))
+
+        let duplicates = try DuplicateFinder().findDuplicates(in: items)
+        XCTAssertEqual(duplicates.count, 1)
+        XCTAssertEqual(Set(duplicates.first?.map(\.name) ?? []), ["a.txt", "b.txt"])
+    }
+
+    func testHashingCanBeCancelled() throws {
+        let content = Data("same bytes here".utf8)
+        try content.write(to: tempDir.appendingPathComponent("a.txt"))
+        try content.write(to: tempDir.appendingPathComponent("b.txt"))
+        let items = try StorageScanner().scan(rootURL: tempDir)
+
+        XCTAssertThrowsError(try DuplicateFinder().findDuplicates(in: items, isCancelled: { true })) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+    }
+
     func testIgnoresFilesWithNoDuplicates() throws {
         try Data("unique".utf8).write(to: tempDir.appendingPathComponent("solo.txt"))
         let items = try StorageScanner().scan(rootURL: tempDir)
