@@ -1,13 +1,21 @@
 version: 2
+# Everything is grouped: at most one PR per ecosystem per week, instead of
+# one PR (and branch) per dependency.
 updates:
   # Keeps the SHA-pinned actions in .github/workflows current.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
 
   # fastlane (release pipeline only; not shipped in the app).
   - package-ecosystem: bundler
     directory: /
     schedule:
       interval: weekly
+    groups:
+      bundler:
+        patterns: ["*"]
