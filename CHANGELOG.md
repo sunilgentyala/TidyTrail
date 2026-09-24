@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.2.1 - 2026-09-24
+
+Security and reliability hardening.
+
+### Security
+- **Path traversal through the trash manifest.** `TidyTrail Trash/manifest.json`
+  lives in the file-shared Documents folder, so anyone with access to it (or
+  a sync/backup tool) can edit it. A crafted `trashedFileName` such as
+  `../../...` made "Delete Forever" and the 30-day auto-purge delete files
+  outside the trash, and a crafted `name` made Restore write outside the
+  chosen folder. Manifest entries are now validated as single path
+  components on load and again before every delete/restore.
+- **Deletion-log injection.** File names can legally contain newlines, so a
+  name like `x\n[TRASHED] /fake` forged extra entries in the deletion log.
+  Control characters are now written as visible escapes.
+- CI/release: all actions pinned to commit SHAs, read-only default token
+  (write only where the `.dmg` upload needs it), `persist-credentials: false`,
+  the `release_tag` input passed via env instead of interpolated into the
+  script, SHA-256 checksum and signed build-provenance attestation for the
+  `.dmg`, fastlane pinned to `~> 2.240`, Dependabot, `SECURITY.md`.
+
+### Fixed
+- **Restore broke after re-picking a folder.** Picking the same folder again
+  minted a new bookmark id and threw the old one away, orphaning every
+  trashed item that pointed at it. Re-picks now keep the original id, and
+  bookmarks still needed by the trash are never evicted by the 10-entry
+  limit. Two different folders with the same name (e.g. two "Downloads")
+  no longer overwrite each other.
+- One unreadable file or subfolder aborted the whole scan (and one file
+  deleted between scanning and hashing aborted duplicate detection); both
+  now skip it and continue.
+- A cancelled scan could still publish its results over a newer scan's;
+  duplicate hashing is now cancellable too.
+- Moving files to the Trash and re-hashing every duplicate candidate ran on
+  the main thread after each delete, freezing the UI on large selections.
+  Moves run in the background, and duplicate groups are updated in place
+  instead of re-hashed. Partial failures are now reported instead of silent.
+- Very long file names (near the 255-byte limit) could not be trashed because
+  the UUID prefix pushed them over; the stored name is trimmed to fit.
+
 ## 1.2.0 - 2026-09-16
 
 Adds a native Mac app alongside the existing iPhone app, in response to

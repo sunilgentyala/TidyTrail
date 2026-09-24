@@ -98,11 +98,34 @@ public struct DeletionLogger: @unchecked Sendable {
             case .trashed: status = "TRASHED"
             case .failed(let reason): status = "FAILED (\(reason))"
             }
-            lines.append("[\(status)] \(record.item.url.path)")
+            lines.append("[\(Self.escaped(status))] \(Self.escaped(record.item.url.path))")
             lines.append("    size: \(ByteFormatter.string(fromBytes: record.item.size)), modified: \(record.item.modificationDate)")
         }
 
         let content = lines.joined(separator: "\n") + "\n"
         try content.write(to: logURL, atomically: true, encoding: .utf8)
+    }
+
+    /// File names may legally contain newlines and other control
+    /// characters. Written raw, a name like `x\n[TRASHED] /fake` would forge
+    /// an extra entry in the log, so every control character is written as
+    /// a visible escape (`\n`, `\u{1B}`, ...) instead.
+    static func escaped(_ text: String) -> String {
+        var out = ""
+        for scalar in text.unicodeScalars {
+            switch scalar {
+            case "\\": out += "\\\\"
+            case "\n": out += "\\n"
+            case "\r": out += "\\r"
+            case "\t": out += "\\t"
+            default:
+                if CharacterSet.controlCharacters.contains(scalar) {
+                    out += "\\u{\(String(scalar.value, radix: 16, uppercase: true))}"
+                } else {
+                    out.unicodeScalars.append(scalar)
+                }
+            }
+        }
+        return out
     }
 }
