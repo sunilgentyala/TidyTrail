@@ -71,7 +71,8 @@ final class DeletionLoggerTests: XCTestCase {
     }
 
     func testFileNamesCannotForgeExtraLogEntries() throws {
-        let forgedName = "innocent.txt\n[TRASHED] /System/forged"
+        // No "/" - a real file name can't contain one, but a newline is legal.
+        let forgedName = "innocent.txt\n[TRASHED] forged-entry.txt"
         let url = tempDir.appendingPathComponent(forgedName)
         try Data("x".utf8).write(to: url)
         let item = FileItem(url: url, name: forgedName, size: 1, modificationDate: Date())
@@ -82,7 +83,7 @@ final class DeletionLoggerTests: XCTestCase {
         let log = try String(contentsOf: result.logURL, encoding: .utf8)
         let entryLines = log.split(separator: "\n").filter { $0.hasPrefix("[") }
         XCTAssertEqual(entryLines.count, 1, "one item must produce exactly one entry line:\n\(log)")
-        XCTAssertTrue(log.contains(#"innocent.txt\n[TRASHED] /System/forged"#))
+        XCTAssertTrue(log.contains(#"innocent.txt\n[TRASHED] forged-entry.txt"#))
     }
 
     func testEscapingIsReversibleForBackslashes() {
